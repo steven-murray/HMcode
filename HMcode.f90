@@ -63,8 +63,8 @@ PROGRAM HMcode
   INTEGER, PARAMETER :: ihm=1
   
   !Write all power types (linear, 2halo, 1halo, full) or only full
-  LOGICAL, PARAMETER :: write_all=.FALSE.
-  
+  LOGICAL, PARAMETER :: write_all=.TRUE.
+  LOGICAL, PARAMETER :: write_intermediate=.TRUE.
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !History of substantial modifications
@@ -170,6 +170,10 @@ PROGRAM HMcode
 
      !Initiliasation for the halomodel calcualtion
      CALL halomod_init(z,lut,cosm)
+
+     IF(write_intermediate) THEN
+         CALL write_intermediate_file(j, z, lut)
+     END IF
 
      !Loop over k values
      DO i=1,nk
@@ -890,6 +894,45 @@ CONTAINS
     verbose=.FALSE.
 
   END SUBROUTINE halomod_init
+
+  SUBROUTINE write_intermediate_file(iz, z, lut)
+      IMPLICIT NONE
+      INTEGER, INTENT(in) :: iz
+      REAL, INTENT(in)  :: z
+      TYPE(tables), INTENT(in) :: lut
+
+      INTEGER :: jjj
+
+      ! Open a new file if this is the first redshift, otherwise append to it.
+      IF(iz>1)THEN
+          OPEN(15,file="mass_data.dat", status="old", position="append", action="write")
+      ELSE
+          OPEN(15,file="mass_data.dat", status="new", action="write")
+      END IF
+
+      IF(iz==1)THEN
+          ! Write a header with the names of the output variables.
+          WRITE(15, *) '# Intermediate mass-vector quantities. Each line contains full '
+          WRITE(15, *) '# mass vector for one quantity at one redshift. The first line is'
+          WRITE(15, *) '# the masses, and it appears only once (it is the same at each z).'
+          WRITE(15, *) '# Subsequent lines are different quantities at the same redshift. Then follows '
+          WRITE(15, *) '# another block of quantities at the next redshift. Redshifts are '
+          WRITE(15, *) '# defined in power.dat. Quantities are:'
+          WRITE(15, *) '# rv nu rr sig sigf zc c'
+          WRITE(15,fmt='(256E10.3)') (lut%m(jjj), jjj=1,lut%n)
+      END IF
+
+      WRITE(15,fmt='(256E10.3)') (lut%rv(jjj), jjj=1,lut%n)
+      WRITE(15,fmt='(256E10.3)') (lut%nu(jjj), jjj=1,lut%n)
+      WRITE(15,fmt='(256E10.3)') (lut%rr(jjj), jjj=1,lut%n)
+      WRITE(15,fmt='(256E10.3)') (lut%sig(jjj), jjj=1,lut%n)
+      WRITE(15,fmt='(256E10.3)') (lut%sigf(jjj), jjj=1,lut%n)
+      WRITE(15,fmt='(256E10.3)') (lut%zc(jjj), jjj=1,lut%n)
+      WRITE(15,fmt='(256E10.3)') (lut%c(jjj), jjj=1,lut%n)
+
+
+     CLOSE(15)
+  END SUBROUTINE write_intermediate_file
 
   PURE FUNCTION radius_m(m,cosm)
 
